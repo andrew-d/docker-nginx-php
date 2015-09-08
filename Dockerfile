@@ -1,8 +1,10 @@
 FROM alpine:3.2
 MAINTAINER Andrew Dunham <andrew@du.nham.ca>
 
-# Install supervisord, nginx, php, PEAR, and php-fpm
-RUN apk add --update                \
+# Install runit, nginx, php, PEAR, and php-fpm
+RUN echo '@edge http://dl-4.alpinelinux.org/alpine/edge/main' >> /etc/apk/repositories && \
+    echo '@testing http://dl-4.alpinelinux.org/alpine/edge/testing' >> /etc/apk/repositories && \
+    apk add --update                \
         ca-certificates             \
         curl                        \
         nginx                       \
@@ -15,12 +17,12 @@ RUN apk add --update                \
         php-openssl                 \
         php-pear                    \
         php-phar                    \
-        supervisor               && \
+        runit@testing            && \
     curl -sS https://getcomposer.org/installer | \
     php -- --install-dir=/usr/local/bin --filename=composer
 
 # Copy config files
-ADD nginx.conf supervisord.conf /tmp/
+ADD nginx.conf /tmp/
 
 # Configure system:
 #   - Add 'php' user and group to run as
@@ -35,9 +37,8 @@ ADD nginx.conf supervisord.conf /tmp/
 #   - Do not catch worker outputs
 #   - No error logging
 #   - Do not daemonize
-# Configure supervisord:
-#   - Run php-fpm
-#   - Run nginx
+# Configure runit:
+#   - Create service directories for everything
 RUN echo "** Configuring system" && \
     addgroup -g 1001 php && \
     adduser                 \
@@ -60,8 +61,18 @@ RUN echo "** Configuring system" && \
             -e '/error_log/d'                               \
             -e 's/;daemonize\s*=\s*yes/daemonize = no/g'    \
             -i /etc/php/php-fpm.conf && \
-    echo "** Configuring supervisord" && \
-    mv /tmp/supervisord.conf /etc/supervisord.conf
+    echo "** Configuring runit" && \
+    mkdir -p /etc/service && \
+    echo "** Done"
+
+# Copy service files in place
+ADD sv /etc/sv/
+ADD ["runsvdir-start", "runit-wrapper", "/sbin/"]
+
+# Symlink to enable services
+RUN echo '** Enabling services' && \
+    ln -s /etc/sv/nginx /etc/service/nginx && \
+    ln -s /etc/sv/php-fpm /etc/service/php-fpm
 
 EXPOSE 80
-CMD ["/usr/bin/supervisord", "-c", "/etc/supervisord.conf"]
+CMD ["/sbin/runit-wrapper"]
