@@ -1,23 +1,22 @@
-FROM alpine:3.2
+FROM alpine:3.4
 MAINTAINER Andrew Dunham <andrew@du.nham.ca>
 
 # Install runit, nginx, php, PEAR, and php-fpm
-RUN echo '@edge http://dl-4.alpinelinux.org/alpine/edge/main' >> /etc/apk/repositories && \
-    echo '@testing http://dl-4.alpinelinux.org/alpine/edge/testing' >> /etc/apk/repositories && \
+RUN echo '@community http://dl-cdn.alpinelinux.org/alpine/edge/community' >> /etc/apk/repositories && \
     apk add --update                \
         ca-certificates             \
         curl                        \
         nginx                       \
-        php-common                  \
-        php-iconv                   \
-        php-ctype                   \
-        php-fpm                     \
-        php-json                    \
-        php-mcrypt                  \
-        php-openssl                 \
-        php-pear                    \
-        php-phar                    \
-        runit@testing            && \
+        php5-common                  \
+        php5-iconv                   \
+        php5-ctype                   \
+        php5-fpm                     \
+        php5-json                    \
+        php5-mcrypt                  \
+        php5-openssl                 \
+        php5-pear                    \
+        php5-phar                    \
+        runit@community          && \
     curl -sS https://getcomposer.org/installer | \
     php -- --install-dir=/usr/local/bin --filename=composer
 
@@ -50,7 +49,7 @@ RUN echo "** Configuring system" && \
     echo "** Configuring nginx" && \
     mv /tmp/nginx.conf /etc/nginx/nginx.conf && \
     echo "** Configuring PHP" && \
-    sed -i -e "s/;cgi.fix_pathinfo=1/cgi.fix_pathinfo=0/g" /etc/php/php.ini && \
+    sed -i -e "s/;cgi.fix_pathinfo=1/cgi.fix_pathinfo=0/g" /etc/php5/php.ini && \
     echo "** Configuring PHP-FPM" && \
     sed -e 's|^listen\s*=.*$|listen = /var/run/php-fpm.sock|g'     \
             -e 's/;listen.mode = 0660/listen.mode = 0666/g' \
@@ -60,7 +59,7 @@ RUN echo "** Configuring system" && \
             -e '/catch_workers_output/s/^;//'               \
             -e '/error_log/d'                               \
             -e 's/;daemonize\s*=\s*yes/daemonize = no/g'    \
-            -i /etc/php/php-fpm.conf && \
+            -i /etc/php5/php-fpm.conf && \
     echo "** Configuring runit" && \
     mkdir -p /etc/service && \
     echo "** Done"
